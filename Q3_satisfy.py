@@ -7,7 +7,6 @@
 """
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
-from math import sqrt
 import pandas as pd
 from geopy.distance import geodesic
 import re
@@ -17,6 +16,7 @@ past_data = pd.read_csv('Q3_data.csv')
 past_data = past_data.values.tolist()
 customer_data = pd.read_excel('accessory2.xlsx')
 customer_data = customer_data.values.tolist()
+# 获得配额排名前170的会员
 lim = list()
 for a in customer_data:
     lim.append(a[2])
@@ -29,12 +29,12 @@ for i in index:
     max_lim.append(customer_data[i])
 
 
-def satisfy(distance, price):
+def satisfy(distance, price):  # 计算吸引度
     s = 0.5 * distance + 0.5 * price
     return s
 
 
-def calculate_distance(X, Y):
+def calculate_distance(X, Y):  # 计算任务包与会员间距离
     distance = geodesic(X, Y)
     distance = str(distance)
     part = re.compile(r'\d+')
@@ -43,12 +43,11 @@ def calculate_distance(X, Y):
     return distance
 
 
-def distance_w():
+def distance_w():  # 保存距离信息
     dis = [list() for i in range(0, 150)]
     location = [i[0:2] for i in past_data]
     f = open('Q3_distance1.txt', 'w')
     for i in range(0, 150):
-        print(i)
         x = tuple(location[i])
         for j in range(0, 170):
             y = max_lim[j][1].split()
@@ -61,7 +60,7 @@ def distance_w():
     f.close()
 
 
-def get_n_dis():
+def get_n_dis():  # 标准化距离矩阵
     dis_data = pd.read_table('Q3_distance1.txt', header=None, sep=' ')
     dis_data = dis_data.iloc[:, 0:170]
     dis_data = dis_data.values.tolist()
@@ -74,7 +73,7 @@ def get_n_dis():
     return s_dis
 
 
-def get_satisfy(s_dis, money):
+def get_satisfy(s_dis, money):  # 获得每个任务包对每个会员的吸引度矩阵
     money = np.array([money]).T
     sat = [list() for i in range(150)]
     for i in range(150):
@@ -87,34 +86,31 @@ def get_satisfy(s_dis, money):
 
 
 money = []
+# 初始化任务包平均定价为0
 for x in range(150):
     money.append(0)
 n_dis = get_n_dis()
 c = list()
+# 循环得到已选任务包数收敛时的定价
 for n in range(33):
-    print(n)
     chosen = []
-    print(money)
     sat_matrix = get_satisfy(n_dis, money)
     sat_matrix = np.array(sat_matrix)
-    print(sat_matrix)
     for i in range(170):
         arr = sat_matrix[:, i]
         arr = arr.tolist()
         re1 = map(arr.index, heapq.nlargest(1, arr))
         re1 = list(re1)
         for a in re1:
-            if arr[a] > 0.51:
+            if arr[a] > 0.51:  # 吸引度阈值
                 chosen.append(a)
                 for j in range(170):
                     sat_matrix[a, j] = -1
-    for k in range(150):
+    for k in range(150):  # 更新定价列表
         if k not in chosen:
             money[k] = money[k] + 0.025
-    print(chosen)
-    print(len(chosen))
     c = chosen
-print(c)
+# 保存优化结果
 result = [[0 for i in range(150)], list(), list()]
 for i in c:
     result[0][i] = 1
